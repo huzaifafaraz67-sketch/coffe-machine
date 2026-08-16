@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Machine</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c1d11, #4a3525);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .machine-container {
+            background: #f7f3ec;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            text-align: center;
+            width: 380px;
+            border: 4px solid #362214;
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #362214;
+            letter-spacing: 1px;
+        }
+        .screen {
+            width: 100%;
+            height: 220px;
+            background: #eae3d2;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 3px inset #d4c5b9;
+            position: relative;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .screen img {
+            max-width: 100%;
+            max-height: 160px;
+            object-fit: contain;
+        }
+        .drink-title {
+            font-weight: bold;
+            color: #362214;
+            margin-top: 8px;
+            font-size: 15px;
+        }
+        .placeholder-text {
+            color: #8c7355;
+            font-style: italic;
+            font-size: 15px;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #c88a4b;
+            transition: width 4s linear;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid #b8a390;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input {
+            background-color: #fff;
+            color: #362214;
+            font-weight: bold;
+            text-align: center;
+        }
+        button {
+            background: linear-gradient(to bottom, #8a5a36, #6f4e37);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(to bottom, #7a4a26, #5f3e27);
+        }
+        button:active {
+            transform: translateY(2px);
+        }
+        button:disabled {
+            background: #b5a395;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="machine-container">
+    ☕ Coffee Machine
+    
+    <div class="screen" id="screen">
+        <span class="placeholder-text" id="statusText">Type a drink name</span>
+    </div>
+
+    <div class="progress-bar-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <input type="text" id="coffeeInput" placeholder="Type drink name or number (1-11)...">
+
+    <button id="makeBtn" onclick="makeCoffee()">Make Coffee</button>
+</div>
+
+<script>
+    // Database of 11 drinks matching 1.png through 11.png
+    const drinks = {
+        "1": "Espresso",
+        "2": "Cappuccino",
+        "3": "Latte",
+        "4": "Mocha",
+        "5": "Americano",
+        "6": "Macchiato",
+        "7": "Cold Brew",
+        "8": "Hot Chocolate",
+        "9": "Vanilla Frappe",
+        "10": "Coca-Cola Special",
+        "11": "Special Blend"
+    };
+
+    function playSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 4);
+
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 4);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 4);
+    }
+
+    function makeCoffee() {
+        const inputField = document.getElementById('coffeeInput');
+        const screen = document.getElementById('screen');
+        const makeBtn = document.getElementById('makeBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        
+        const userInput = inputField.value.trim().toLowerCase();
+
+        if (!userInput) {
+            alert('Please type a drink name or number!');
+            return;
+        }
+
+        // Find the matching drink number by name or number
+        let matchedKey = null;
+        for (let key in drinks) {
+            if (key === userInput || drinks[key].toLowerCase() === userInput || drinks[key].toLowerCase().includes(userInput)) {
+                matchedKey = key;
+                break;
+            }
+        }
+
+        if (!matchedKey) {
+            alert('Drink not found! Try typing a number from 1 to 11 or a name like Espresso.');
+            return;
+        }
+
+        const drinkName = drinks[matchedKey];
+
+        // Disable controls during brewing
+        makeBtn.disabled = true;
+        inputField.disabled = true;
+
+        // Show brewing screen
+        screen.innerHTML = `<span class="placeholder-text">Brewing ${drinkName}...</span>`;
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        
+        setTimeout(() => {
+            progressBar.style.width = '100%';
+        }, 50);
+
+        // Play sound for 4 seconds
+        playSound();
+
+        // After 4 seconds, show the image and name
+        setTimeout(() => {
+            screen.innerHTML = `
+                <img src="${matchedKey}.png" alt="${drinkName}" onerror="this.onerror=null; this.parentNode.innerHTML='<span class=\'placeholder-text\'>Image ${matchedKey}.png not found</span>';">
+                <div class="drink-title">${drinkName}</div>
+            `;
+            progressContainer.style.display = 'none';
+            
+            // Re-enable controls
+            makeBtn.disabled = false;
+            inputField.disabled = false;
+        }, 4000);
+    }
+</script>
+
+</body>
+</html>
